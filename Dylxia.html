@@ -1,0 +1,662 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Papelería Dylxia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #fff8f0;
+      color: #333;
+    }
+    header {
+      background-color: #ffe4ec;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #menu button, button {
+      background-color: #ffb6c1;
+      border: none;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+    }
+    #productos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      padding: 10px;
+    }
+    .producto {
+      border: 1px solid #ccc;
+      background-color: #fff0f5;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    #carrito {
+      padding: 10px;
+      background-color: #fffafa;
+    }
+    footer {
+      background-color: #ffe4ec;
+      padding: 20px;
+      text-align: center;
+    }
+    .contacto-redes {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .redes {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .redes img {
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+    }
+    .seccion-titulo {
+      text-align: center;
+      font-size: 24px;
+      margin: 10px 0;
+    }
+    #formulario-pago {
+      display: none;
+      background-color: #fff0f5;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 10px;
+    }
+    #formulario-pago input {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+    #paginacion {
+      display: flex;
+      justify-content: center;
+      margin: 20px;
+    }
+    .pagina-btn {
+      background-color: #ffc8dd;
+      border: none;
+      margin: 0 5px;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .opciones-pago {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    /* Estilos para ocultar elementos al imprimir (opcional, pero útil) */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #factura, #factura * {
+        visibility: visible;
+      }
+      #factura {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+      /* Ocultar botones de la factura al imprimir */
+      #volver-fin {
+          display: none !important;
+      }
+    }
+  </style>
+  <!-- Incluye jsPDF y html2canvas desde un CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <img src="img/logo.png" alt="Logo" height="40" style="cursor:pointer" onclick="mostrarTodosProductos()">
+      <input type="text" id="search" placeholder="Buscar productos...">
+    </div>
+    <nav id="menu"></nav>
+  </header>
+  <h2 class="seccion-titulo" id="titulo-seccion"></h2>
+  <section id="productos"></section>
+  <div id="paginacion"></div>
+  <section id="carrito">
+    <h2>Carrito</h2>
+    <ul id="lista-carrito"></ul>
+    <p>Total: $<span id="total-carrito">0.00</span></p>
+    <button id="procesar">Procesar pedido</button>
+  </section>
+
+  <section id="formulario-pago">
+    <h3>¿Cómo deseas pagar?</h3>
+    <div class="opciones-pago">
+      <button onclick="mostrarFormulario('efectivo')">Efectivo</button>
+      <button onclick="mostrarFormulario('tarjeta')">Tarjeta</button>
+    </div>
+    <form id="form-efectivo" style="display:none">
+      <h4>Pago en efectivo</h4>
+      <input type="text" id="efectivo-nombre" placeholder="Nombre completo" required>
+      <input type="text" id="efectivo-direccion" placeholder="Dirección" required>
+      <input type="text" id="efectivo-cp" placeholder="Código Postal" required>
+      <input type="number" id="monto-pago" placeholder="Ingrese monto" />
+      <p id="mensaje-error" style="color: red; display: none;"></p>
+      <p><strong>Cambio:</strong> $<span id="cambio">0.00</span></p>
+      <button type="submit">Confirmar pedido</button>
+    </form>
+    <form id="form-tarjeta" style="display:none">
+      <h4>Pago con tarjeta</h4>
+      <input type="text" id="tarjeta-nombre-titular" placeholder="Nombre del titular" required>
+      <input type="text" id="tarjeta-numero" placeholder="Número de tarjeta" maxlength="19" required>
+      <input type="text" id="tarjeta-vencimiento" placeholder="Fecha de vencimiento (MM/AA)" maxlength="5" required>
+      <input type="text" id="tarjeta-cvv" placeholder="CVV" maxlength="4" required>
+      <input type="text" id="tarjeta-direccion" placeholder="Dirección de pago" required>
+      <input type="text" id="tarjeta-cp" placeholder="Código Postal" required>
+      <input type="text" id="tarjeta-celular" placeholder="Número de celular" required>
+      <button type="submit">Pagar</button>
+    </form>
+  </section>
+<footer>
+    <div>¿Dudas? Escríbenos a: <a href="mailto:contacto@papeleriadylxia.com">contacto@papeleriadylxia.com</a></div>
+    <div class="contacto-redes">
+      <strong>Síguenos en nuestras redes:</strong>
+      <div class="redes">
+        <a href="https://www.instagram.com/xioo.mg/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+          <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram Logo" width="20" height="20" style="margin-right: 5px;">
+          <span>xioo.mg</span>
+        </a>
+        <a href="https://www.instagram.com/_garciamora_a_a_/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+          <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram Logo" width="20" height="20" style="margin-right: 5px;">
+          <span>Dylan Garciamora</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    // Inicialización de jsPDF (importante, ya que es un UMD module)
+    const { jsPDF } = window.jspdf;
+
+    const productos = [
+      { nombre: "Bolígrafos de tinta líquida", precio: 5.00, seccion: "Escritura", imagen: "img/p1.jpg" },
+      { nombre: "Bolígrafos de gel", precio: 6.00, seccion: "Escritura", imagen: "img/p2.jpg" },
+      { nombre: "Bolígrafos de punta fina", precio: 7.00, seccion: "Escritura", imagen: "img/p3.jpg" },
+      { nombre: "Bolígrafos retráctiles", precio: 8.00, seccion: "Escritura", imagen: "img/p4.jpg" },
+      { nombre: "Bolígrafos de colores", precio: 5.50, seccion: "Escritura", imagen: "img/p5.jpg" },
+      { nombre: "Bolígrafos borrables", precio: 9.00, seccion: "Escritura", imagen: "img/p6.jpg" },
+      { nombre: "Lápices de grafito (HB, 2B, etc)", precio: 3.00, seccion: "Escritura", imagen: "img/p7.jpg" },
+      { nombre: "Portaminas (0.5, 0.7 mm)", precio: 4.00, seccion: "Escritura", imagen: "img/p8.jpg" },
+      { nombre: "Minas para portaminas", precio: 1.50, seccion: "Escritura", imagen: "img/p9.jpg" },
+      { nombre: "Lápices de colores básicos", precio: 5.50, seccion: "Escritura", imagen: "img/p10.jpg" },
+      { nombre: "Lápices de colores profesionales", precio: 8.00, seccion: "Escritura", imagen: "img/p11.jpg" },
+      { nombre: "Crayones", precio: 4.00, seccion: "Escritura", imagen: "img/p12.jpg" },
+      { nombre: "Marcadores permanentes", precio: 6.50, seccion: "Escritura", imagen: "img/p13.jpg" },
+      { nombre: "Marcadores de pizarrón blanco", precio: 7.00, seccion: "Escritura", imagen: "img/p14.jpg" },
+      { nombre: "Resaltadores fluorescentes", precio: 4.50, seccion: "Escritura", imagen: "img/p15.jpg" },
+      { nombre: "Plumones de punta fina", precio: 5.00, seccion: "Escritura", imagen: "img/p16.jpg" },
+      { nombre: "Plumones para tela", precio: 6.00, seccion: "Escritura", imagen: "img/p17.jpg" },
+      { nombre: "Líquido corrector", precio: 2.00, seccion: "Escritura", imagen: "img/p18.jpg" },
+      { nombre: "Cinta correctora", precio: 3.00, seccion: "Escritura", imagen: "img/p19.jpg" },
+      { nombre: "Gomas de borrar escolares", precio: 1.50, seccion: "Escritura", imagen: "img/p20.jpg" },
+      { nombre: "Gomas de borrar artísticas", precio: 2.50, seccion: "Escritura", imagen: "img/p21.jpg" },
+      { nombre: "Sacapuntas manuales", precio: 2.00, seccion: "Escritura", imagen: "img/p22.jpg" },
+      { nombre: "Sacapuntas eléctricos", precio: 15.00, seccion: "Escritura", imagen: "img/p23.jpg" },
+      { nombre: "Cuadernos profesionales", precio: 10.00, seccion: "Papelería", imagen: "img/p24.jpg" },
+      { nombre: "Cuadernos cosidos", precio: 5.00, seccion: "Papelería", imagen: "img/p25.jpg" },
+      { nombre: "Cuadernos espiral", precio: 4.50, seccion: "Papelería", imagen: "img/p26.jpg" },
+      { nombre: "Cuadernos cuadriculados", precio: 6.00, seccion: "Papelería", imagen: "img/p27.jpg" },
+      { nombre: "Cuadernos rayados", precio: 5.00, seccion: "Papelería", imagen: "img/p28.jpg" },
+      { nombre: "Hojas blancas tamaño carta", precio: 3.00, seccion: "Papelería", imagen: "img/p29.jpg" },
+      { nombre: "Hojas recicladas", precio: 2.50, seccion: "Papelería", imagen: "img/p30.jpg" },
+      { nombre: "Hojas de colores", precio: 4.00, seccion: "Papelería", imagen: "img/p31.jpg" },
+      { nombre: "Hojas milimétricas", precio: 3.50, seccion: "Papelería", imagen: "img/p32.jpg" },
+      { nombre: "Carpetas de anillas", precio: 6.00, seccion: "Papelería", imagen: "img/p33.jpg" },
+      { nombre: "Carpetas plásticas", precio: 5.00, seccion: "Papelería", imagen: "img/p34.jpg" },
+      { nombre: "Folders manila", precio: 4.00, seccion: "Papelería", imagen: "img/p35.jpg" },
+      { nombre: "Folders con broche", precio: 4.50, seccion: "Papelería", imagen: "img/p36.jpg" },
+      { nombre: "Libretas con separadores", precio: 7.00, seccion: "Papelería", imagen: "img/p37.jpg" },
+      { nombre: "Libretas con tapas duras", precio: 6.00, seccion: "Papelería", imagen: "img/p38.jpg" },
+      { nombre: "Libretas con diseño", precio: 8.00, seccion: "Papelería", imagen: "img/p39.jpg" },
+      { nombre: "Libretas ecológicas", precio: 7.50, seccion: "Papelería", imagen: "img/p40.jpg" },
+      { nombre: "Post-it tradicionales", precio: 3.00, seccion: "Papelería", imagen: "img/p41.jpg" },
+      { nombre: "Notas adhesivas de colores", precio: 4.00, seccion: "Papelería", imagen: "img/p42.jpg" },
+      { nombre: "Blocs de notas", precio: 5.00, seccion: "Papelería", imagen: "img/p43.jpg" },
+      { nombre: "Tijeras escolares", precio: 3.50, seccion: "Papelería", imagen: "img/p44.jpg" },
+      { nombre: "Tijeras punta roma", precio: 4.00, seccion: "Papelería", imagen: "img/p45.jpg" },
+      { nombre: "Tijeras de oficina", precio: 5.00, seccion: "Papelería", imagen: "img/p46.jpg" },
+      { nombre: "Tijeras para zurdos", precio: 5.50, seccion: "Papelería", imagen: "img/p47.jpg" },
+      { nombre: "Cúter escolar", precio: 2.50, seccion: "Papelería", imagen: "img/p48.jpg" },
+      { nombre: "Cúter de precisión", precio: 3.00, seccion: "Papelería", imagen: "img/p49.jpg" },
+      { nombre: "Repuestos para cúter", precio: 1.50, seccion: "Papelería", imagen: "img/p50.jpg" },
+      { nombre: "Reglas de 30 cm", precio: 2.00, seccion: "Papelería", imagen: "img/p51.jpg" },
+      { nombre: "Escuadras de 45° y 60°", precio: 3.00, seccion: "Papelería", imagen: "img/p52.jpg" },
+      { nombre: "Reglas flexibles", precio: 2.50, seccion: "Papelería", imagen: "img/p53.jpg" },
+      { nombre: "Reglas metálicas", precio: 4.00, seccion: "Papelería", imagen: "img/p54.jpg" },
+      { nombre: "Compás con lápiz", precio: 5.00, seccion: "Papelería", imagen: "img/p55.jpg" },
+      { nombre: "Compás de precisión", precio: 6.00, seccion: "Papelería", imagen: "img/p56.jpg" },
+      { nombre: "Transportador básico", precio: 2.50, seccion: "Papelería", imagen: "img/p57.jpg" },
+      { nombre: "Transportador semicircular", precio: 3.00, seccion: "Papelería", imagen: "img/p58.jpg" },
+      { nombre: "Acuarelas escolares", precio: 6.00, seccion: "Arte", imagen: "img/p59.jpg" },
+      { nombre: "Acuarelas profesionales", precio: 12.00, seccion: "Arte", imagen: "img/p60.jpg" },
+      { nombre: "Pinturas acrílicas", precio: 8.00, seccion: "Arte", imagen: "img/p61.jpg" },
+      { nombre: "Pinturas al óleo", precio: 10.00, seccion: "Arte", imagen: "img/p62.jpg" },
+      { nombre: "Pintura vinílica", precio: 9.00, seccion: "Arte", imagen: "img/p63.jpg" },
+      { nombre: "Pintura en tela", precio: 7.50, seccion: "Arte", imagen: "img/p64.jpg" },
+      { nombre: "Pinceles escolares", precio: 3.00, seccion: "Arte", imagen: "img/p65.jpg" },
+      { nombre: "Pinceles de pelo fino", precio: 4.00, seccion: "Arte", imagen: "img/p66.jpg" },
+      { nombre: "Set de pinceles para óleo", precio: 10.00, seccion: "Arte", imagen: "img/p67.jpg" },
+      { nombre: "Espátulas de pintura", precio: 5.50, seccion: "Arte", imagen: "img/p68.jpg" },
+      { nombre: "Cartulinas de colores", precio: 2.50, seccion: "Arte", imagen: "img/p69.jpg" },
+      { nombre: "Papel crepé", precio: 3.00, seccion: "Arte", imagen: "img/p70.jpg" },
+      { nombre: "Papel fantasía", precio: 2.00, seccion: "Arte", imagen: "img/p71.jpg" },
+      { nombre: "Papel seda", precio: 4.00, seccion: "Arte", imagen: "img/p72.jpg" },
+      { nombre: "Papel para acuarela", precio: 5.50, seccion: "Arte", imagen: "img/p73.jpg" },
+      { nombre: "Pegamento en barra", precio: 2.00, seccion: "Papelería", imagen: "img/p74.jpg" },
+      { nombre: "Pegamento líquido escolar", precio: 3.00, seccion: "Papelería", imagen: "img/p75.jpg" },
+      { nombre: "Silicón líquido", precio: 4.00, seccion: "Papelería", imagen: "img/p76.jpg" },
+      { nombre: "Plastilina", precio: 3.50, seccion: "Arte", imagen: "img/p77.jpg" },
+      { nombre: "Masa moldeable", precio: 4.00, seccion: "Arte", imagen: "img/p78.jpg" },
+      { nombre: "Grapadora estándar", precio: 6.00, seccion: "Oficina", imagen: "img/p79.jpg" },
+      { nombre: "Mini grapadora", precio: 4.00, seccion: "Oficina", imagen: "img/p80.jpg" },
+      { nombre: "Perforadora de papel", precio: 5.00, seccion: "Oficina", imagen: "img/p81.jpg" },
+      { nombre: "Grapas de repuesto", precio: 2.00, seccion: "Oficina", imagen: "img/p82.jpg" },
+      { nombre: "Clips metálicos", precio: 1.00, seccion: "Oficina", imagen: "img/p83.jpg" },
+      { nombre: "Sujetapapeles grandes", precio: 1.50, seccion: "Oficina", imagen: "img/p84.jpg" },
+      { nombre: "Chinchetas de colores", precio: 2.00, seccion: "Oficina", imagen: "img/p85.jpg" },
+      { nombre: "Bandejas para escritorio", precio: 10.00, seccion: "Oficina", imagen: "img/p86.jpg" },
+      { nombre: "Cajas organizadoras", precio: 6.00, seccion: "Oficina", imagen: "img/p87.jpg" },
+      { nombre: "Separadores de documentos", precio: 2.50, seccion: "Oficina", imagen: "img/p88.jpg" },
+      { nombre: "Archivadores", precio: 7.00, seccion: "Oficina", imagen: "img/p89.jpg" },
+      { nombre: "Calculadora básica", precio: 5.00, seccion: "Oficina", imagen: "img/p90.jpg" },
+      { nombre: "Calculadora científica", precio: 12.00, seccion: "Oficina", imagen: "img/p91.jpg" },
+      { nombre: "Sello de fecha", precio: 4.00, seccion: "Oficina", imagen: "img/p92.jpg" },
+      { nombre: "Tinta para sellos", precio: 2.50, seccion: "Oficina", imagen: "img/p93.jpg" },
+      { nombre: "Audífonos escolares", precio: 15.00, seccion: "Tecnología", imagen: "img/p94.jpg" },
+      { nombre: "Auriculares con micrófono", precio: 18.00, seccion: "Tecnología", imagen: "img/p95.jpg" },
+      { nombre: "Lámpara LED de escritorio", precio: 12.00, seccion: "Tecnología", imagen: "img/p96.jpg" },
+      { nombre: "Lámpara recargable", precio: 10.00, seccion: "Tecnología", imagen: "img/p97.jpg" },
+      { nombre: "Reloj despertador digital", precio: 20.00, seccion: "Tecnología", imagen: "img/p98.jpg" },
+      { nombre: "Reloj escolar analógico", precio: 15.00, seccion: "Tecnología", imagen: "img/p99.jpg" },
+      { nombre: "Calculadora solar", precio: 6.00, seccion: "Oficina", imagen: "img/p100.jpg" },
+      { nombre: "Calculadora gráfica", precio: 30.00, seccion: "Oficina", imagen: "img/p101.jpg" },
+      { nombre: "Sobres tamaño carta", precio: 1.50, seccion: "Papelería", imagen: "img/p102.jpg" },
+      { nombre: "Sobres con burbuja", precio: 3.00, seccion: "Papelería", imagen: "img/p103.jpg" },
+      { nombre: "Sobres acolchados", precio: 4.00, seccion: "Papelería", imagen: "img/p104.jpg" },
+      { nombre: "Cajas para envío medianas", precio: 7.00, seccion: "Papelería", imagen: "img/p105.jpg" },
+      { nombre: "Cajas pequeñas", precio: 5.00, seccion: "Papelería", imagen: "img/p106.jpg" },
+      { nombre: "Etiquetas adhesivas blancas", precio: 2.00, seccion: "Papelería", imagen: "img/p107.jpg" },
+      { nombre: "Etiquetas de colores", precio: 3.00, seccion: "Papelería", imagen: "img/p108.jpg" },
+      { nombre: "Cinta de embalaje transparente", precio: 2.50, seccion: "Papelería", imagen: "img/p109.jpg" },
+      { nombre: "Cinta reforzada", precio: 3.00, seccion: "Papelería", imagen: "img/p110.jpg" },
+      { nombre: "Dispenser para cinta", precio: 5.00, seccion: "Papelería", imagen: "img/p111.jpg" }
+    ];
+
+    let carrito = []; // Inicializamos el carrito vacío
+
+    const menu = document.getElementById("menu");
+    const productosDiv = document.getElementById("productos");
+    const listaCarrito = document.getElementById("lista-carrito");
+    const totalCarrito = document.getElementById("total-carrito");
+    const tituloSeccion = document.getElementById("titulo-seccion");
+    const search = document.getElementById("search");
+    const paginacionDiv = document.getElementById("paginacion");
+
+    let paginaActual = 1;
+    let productosPorPagina = 20;
+    let productosFiltrados = productos;
+
+    // Función para guardar el carrito en localStorage
+    function guardarCarritoEnLocalStorage() {
+      localStorage.setItem("carrito", JSON.stringify(carrito));
+    }
+
+    // Función para cargar el carrito desde localStorage
+    function cargarCarritoDesdeLocalStorage() {
+      const carritoGuardado = localStorage.getItem("carrito");
+      if (carritoGuardado) {
+        carrito = JSON.parse(carritoGuardado);
+      }
+    }
+
+    function renderMenu() {
+      const secciones = [...new Set(productos.map(p => p.seccion))];
+      menu.innerHTML = secciones.map(seccion => `<button onclick="mostrarSeccion('${seccion}')">${seccion}</button>`).join("");
+    }
+
+    function mostrarSeccion(seccion) {
+      tituloSeccion.textContent = `Productos de la sección: ${seccion}`;
+      productosFiltrados = productos.filter(p => p.seccion === seccion);
+      paginaActual = 1;
+      renderProductos();
+    }
+
+    function mostrarTodosProductos() {
+      tituloSeccion.textContent = "Todos los productos";
+      productosFiltrados = productos;
+      paginaActual = 1;
+      renderProductos();
+    }
+
+    function renderProductos() {
+      const inicio = (paginaActual - 1) * productosPorPagina;
+      const fin = inicio + productosPorPagina;
+      const paginaProductos = productosFiltrados.slice(inicio, fin);
+      productosDiv.innerHTML = paginaProductos.map((p, i) => `
+        <div class="producto">
+          <img src="${p.imagen}" alt="${p.nombre}" width="100%">
+          <h4>${p.nombre}</h4>
+          <p>$${p.precio.toFixed(2)}</p>
+          <button onclick="agregarAlCarritoPorNombre('${p.nombre}')">Agregar al carrito</button>
+        </div>
+      `).join("");
+      renderPaginacion();
+    }
+
+    function renderPaginacion() {
+      const totalPaginas = Math.ceil(productosFiltrados.length / productosPorPagina);
+      paginacionDiv.innerHTML = "";
+      for (let i = 1; i <= totalPaginas; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.className = "pagina-btn";
+        if (i === paginaActual) btn.style.backgroundColor = "#ff69b4";
+        btn.onclick = () => { paginaActual = i; renderProductos(); };
+        paginacionDiv.appendChild(btn);
+      }
+    }
+
+    function agregarAlCarritoPorNombre(nombre) {
+      const producto = productos.find(p => p.nombre === nombre);
+      if (!producto) return;
+      const existente = carrito.find(p => p.nombre === producto.nombre);
+      if (existente) {
+        existente.cantidad++;
+      } else {
+        carrito.push({ ...producto, cantidad: 1 });
+      }
+      actualizarCarrito();
+      guardarCarritoEnLocalStorage(); // Guardar cada vez que se agrega algo al carrito
+    }
+
+    function eliminarDelCarrito(index) {
+      if (carrito[index].cantidad > 1) {
+        carrito[index].cantidad--;
+      } else {
+        carrito.splice(index, 1);
+      }
+      actualizarCarrito();
+      guardarCarritoEnLocalStorage(); // Guardar cada vez que se elimina algo del carrito
+    }
+
+    function actualizarCarrito() {
+      listaCarrito.innerHTML = carrito.map((p, i) => `
+        <li>
+          ${p.nombre} x${p.cantidad} - $${(p.precio * p.cantidad).toFixed(2)}
+          <button onclick="eliminarDelCarrito(${i})">Eliminar</button>
+        </li>
+      `).join("");
+      const total = carrito.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
+      totalCarrito.textContent = total.toFixed(2);
+    }
+
+    document.getElementById("procesar").addEventListener("click", () => {
+      document.getElementById("formulario-pago").style.display = "block";
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    });
+
+    function mostrarFormulario(tipo) {
+      document.getElementById("form-efectivo").style.display = tipo === 'efectivo' ? 'block' : 'none';
+      document.getElementById("form-tarjeta").style.display = tipo === 'tarjeta' ? 'block' : 'none';
+    }
+
+    document.getElementById("monto-pago").addEventListener("input", () => {
+      const monto = parseFloat(document.getElementById("monto-pago").value) || 0;
+      const total = parseFloat(totalCarrito.textContent);
+      const cambio = monto - total;
+      const mensajeError = document.getElementById("mensaje-error");
+
+      if (cambio < 0) {
+        mensajeError.textContent = `El monto ingresado es insuficiente. Faltan $${Math.abs(cambio).toFixed(2)}.`;
+        mensajeError.style.display = "block";
+        document.getElementById("cambio").textContent = "0.00";
+      } else {
+        mensajeError.style.display = "none";
+        document.getElementById("cambio").textContent = cambio.toFixed(2);
+      }
+    });
+
+    search.addEventListener("input", () => {
+      const texto = search.value.toLowerCase();
+      productosFiltrados = productos.filter(p => p.nombre.toLowerCase().includes(texto));
+      tituloSeccion.textContent = `Resultados para: "${search.value}"`;
+      paginaActual = 1;
+      renderProductos();
+    });
+
+    function mostrarFactura(pagoInfo) {
+      const detalle = document.getElementById("detalle-factura");
+      const formaPago = pagoInfo.forma;
+      const totalCompra = parseFloat(totalCarrito.textContent).toFixed(2);
+      let totalPagado = 0;
+      let totalCambio = 0;
+
+      let html = "<h3>Factura de compra</h3>";
+
+      html += "<h4>Productos comprados:</h4><ul>";
+      carrito.forEach(p => {
+        html += `<li>${p.nombre} x${p.cantidad} - $${(p.precio * p.cantidad).toFixed(2)}</li>`;
+      });
+      html += `</ul><p><strong>Total de la compra:</strong> $${totalCompra}</p>`;
+      html += `<p><strong>Forma de pago:</strong> ${formaPago}</p>`;
+
+      if (formaPago === "Efectivo") {
+        totalPagado = parseFloat(document.getElementById("monto-pago").value).toFixed(2);
+        totalCambio = parseFloat(pagoInfo.cambio).toFixed(2);
+        html += `<p><strong>Total del Pago:</strong> $${totalPagado}</p>`;
+        html += `<p><strong>Total de Cambio:</strong> $${totalCambio}</p>`;
+      } else if (formaPago === "Tarjeta") {
+        totalPagado = totalCompra;
+        html += `<p><strong>Total del Pago:</strong> $${totalPagado}</p>`;
+        html += `<p><strong>Total de Cambio:</strong> $${totalCambio}</p>`; // Mostrar 0.00 para tarjeta
+      }
+      
+      html += "<h4>Datos de envío/pago:</h4><ul>";
+      if (formaPago === "Efectivo") {
+        html += `<li>Nombre completo: ${document.getElementById("efectivo-nombre").value}</li>`;
+        html += `<li>Dirección: ${document.getElementById("efectivo-direccion").value}</li>`;
+        html += `<li>Código Postal: ${document.getElementById("efectivo-cp").value}</li>`;
+        html += `<li>Monto ingresado: $${parseFloat(document.getElementById("monto-pago").value).toFixed(2)}</li>`;
+        html += `<li>Cambio: $${pagoInfo.cambio}</li>`;
+      } else if (formaPago === "Tarjeta") {
+        html += `<li>Nombre del titular: ${document.getElementById("tarjeta-nombre-titular").value}</li>`;
+        html += `<li>Número de tarjeta: **** **** **** ${document.getElementById("tarjeta-numero").value.slice(-4)}</li>`;
+        html += `<li>Fecha de vencimiento: ${document.getElementById("tarjeta-vencimiento").value}</li>`;
+        html += `<li>Dirección de pago: ${document.getElementById("tarjeta-direccion").value}</li>`;
+        html += `<li>Código Postal: ${document.getElementById("tarjeta-cp").value}</li>`;
+        html += `<li>Número de celular: ${document.getElementById("tarjeta-celular").value}</li>`;
+      }
+      html += "</ul>";
+
+      detalle.innerHTML = html;
+      document.getElementById("factura").style.display = "block";
+      detalle.style.display = "block";
+      document.getElementById("volver-fin").style.display = "flex";
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    document.getElementById("form-efectivo").addEventListener("submit", e => {
+      e.preventDefault();
+      const monto = parseFloat(document.getElementById("monto-pago").value) || 0;
+      const total = parseFloat(totalCarrito.textContent);
+      const cambio = (monto - total).toFixed(2);
+
+      if (monto < total) {
+        alert("El monto ingresado es insuficiente.");
+        return;
+      }
+
+      alert("¡Pago en efectivo exitoso!");
+      mostrarFactura({ forma: "Efectivo", cambio: cambio });
+      guardarEstadoFormularios();
+    });
+
+    document.getElementById("form-tarjeta").addEventListener("submit", e => {
+      e.preventDefault();
+      alert("¡Pago con tarjeta exitoso!");
+      mostrarFactura({ forma: "Tarjeta" });
+      guardarEstadoFormularios();
+    });
+
+    function volverAComprar() {
+      carrito.length = 0;
+      localStorage.removeItem("carrito");
+      localStorage.removeItem("formularioEfectivo");
+      localStorage.removeItem("formularioTarjeta");
+
+      document.getElementById("efectivo-nombre").value = "";
+      document.getElementById("efectivo-direccion").value = "";
+      document.getElementById("efectivo-cp").value = "";
+      document.getElementById("monto-pago").value = "";
+      document.getElementById("cambio").textContent = "0.00";
+      document.getElementById("mensaje-error").style.display = "none";
+
+      document.getElementById("tarjeta-nombre-titular").value = "";
+      document.getElementById("tarjeta-numero").value = "";
+      document.getElementById("tarjeta-vencimiento").value = "";
+      document.getElementById("tarjeta-cvv").value = "";
+      document.getElementById("tarjeta-direccion").value = "";
+      document.getElementById("tarjeta-cp").value = "";
+      document.getElementById("tarjeta-celular").value = "";
+
+      document.getElementById("factura").style.display = "none";
+      document.getElementById("formulario-pago").style.display = "none";
+      
+      actualizarCarrito();
+      mostrarTodosProductos();
+    }
+
+    function finalizarCompra() {
+      localStorage.removeItem("carrito");
+      localStorage.removeItem("formularioEfectivo");
+      localStorage.removeItem("formularioTarjeta");
+      document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1 style="color:#ff69b4;">¡Gracias por comprar con nosotros!</h1></div>';
+    }
+
+    function guardarEstadoFormularios() {
+      const efectivoData = {
+        nombre: document.getElementById("efectivo-nombre").value,
+        direccion: document.getElementById("efectivo-direccion").value,
+        cp: document.getElementById("efectivo-cp").value,
+        monto: document.getElementById("monto-pago").value
+      };
+      localStorage.setItem("formularioEfectivo", JSON.stringify(efectivoData));
+
+      const tarjetaData = {
+        nombreTitular: document.getElementById("tarjeta-nombre-titular").value,
+        numero: document.getElementById("tarjeta-numero").value,
+        vencimiento: document.getElementById("tarjeta-vencimiento").value,
+        cvv: document.getElementById("tarjeta-cvv").value,
+        direccion: document.getElementById("tarjeta-direccion").value,
+        cp: document.getElementById("tarjeta-cp").value,
+        celular: document.getElementById("tarjeta-celular").value
+      };
+      localStorage.setItem("formularioTarjeta", JSON.stringify(tarjetaData));
+    }
+
+    function cargarEstadoFormularios() {
+      const efectivoData = JSON.parse(localStorage.getItem("formularioEfectivo"));
+      if (efectivoData) {
+        document.getElementById("efectivo-nombre").value = efectivoData.nombre || "";
+        document.getElementById("efectivo-direccion").value = efectivoData.direccion || "";
+        document.getElementById("efectivo-cp").value = efectivoData.cp || "";
+        document.getElementById("monto-pago").value = efectivoData.monto || "";
+        const monto = parseFloat(document.getElementById("monto-pago").value) || 0;
+        const total = parseFloat(totalCarrito.textContent);
+        const cambio = monto - total;
+        document.getElementById("cambio").textContent = cambio.toFixed(2);
+      }
+
+      const tarjetaData = JSON.parse(localStorage.getItem("formularioTarjeta"));
+      if (tarjetaData) {
+        document.getElementById("tarjeta-nombre-titular").value = tarjetaData.nombreTitular || "";
+        document.getElementById("tarjeta-numero").value = tarjetaData.numero || "";
+        document.getElementById("tarjeta-vencimiento").value = tarjetaData.vencimiento || "";
+        document.getElementById("tarjeta-cvv").value = tarjetaData.cvv || "";
+        document.getElementById("tarjeta-direccion").value = tarjetaData.direccion || "";
+        document.getElementById("tarjeta-cp").value = tarjetaData.cp || "";
+        document.getElementById("tarjeta-celular").value = tarjetaData.celular || "";
+      }
+    }
+
+    async function imprimirPDF() {
+        const facturaElement = document.getElementById('factura');
+
+        // Ocultar los botones de control para que no aparezcan en el PDF
+        const volverFinButtons = document.getElementById('volver-fin');
+        volverFinButtons.style.display = 'none';
+
+        const canvas = await html2canvas(facturaElement, { scale: 2 }); // Escala para mejor resolución
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4'); // 'p' for portrait, 'mm' for millimeters, 'a4' for A4 size
+
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
+
+        pdf.save('factura_papeleria_dylxia.pdf');
+
+        // Volver a mostrar los botones después de generar el PDF
+        volverFinButtons.style.display = 'flex';
+    }
+
+    // Inicialización al cargar la página
+    cargarCarritoDesdeLocalStorage();
+    cargarEstadoFormularios();
+    renderMenu();
+    mostrarTodosProductos();
+    actualizarCarrito();
+  </script>
+
+  <section id="factura" style="display:none; padding:20px; background-color:#fff0f5; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); margin:20px;">
+    <h2 style="color:#ff69b4;">Papelería Dylxia</h2>
+    <div id="detalle-factura" style="display:none;"></div>
+    <div id="volver-fin" style="display:none; margin-top:20px; gap:10px;">
+      <button onclick="volverAComprar()">Volver a comprar</button>
+      <button onclick="finalizarCompra()">Fin de la compra</button>
+      <button onclick="imprimirPDF()">Descargar Factura PDF</button>
+    </div>
+    <p style="margin-top:20px; font-weight:bold;">¡Gracias por comprar!</p>
+  </section>
+
+</body>
+</html>
